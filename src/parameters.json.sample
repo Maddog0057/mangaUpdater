@@ -1,7 +1,7 @@
 {
     "discord":{
       "name":"mangaU",
-      "token":"<YourDiscordToken>"
+      "token":"<YourDiscordTokenHere>"
     },
     "system":{
         "base":"/opt/mangaUpdater/Mangas/",
