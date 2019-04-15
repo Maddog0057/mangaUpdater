@@ -3,74 +3,40 @@ Copyright (C) 2014 Emmanuel Noutahi
 Please don't change the original Copyright when you modify the program
 
 """
-from urllib2 import Request, urlopen
+from urllib.request import Request, urlopen
 import sqlite3 as lite
 import os.path, sys
 from pprint import pprint
-
-from email.mime.text import MIMEText
-import email.Utils as eUtils
-import smtplib
+from discord_webhook import DiscordWebhook, DiscordEmbed
 import json
 import requests
 
-from parameters import *
+with open("config.json", 'r') as json_data_file:
+    config = json.load(json_data_file)
+
+BASE_DIR = config['system']['base']
+DATA_DIR = config['system']['data']
+DATABASE_NAME = config['database']['name']
+MANGALIST = config['database']['list']
+MANGA_TABLE = config['database']['table']
+discordUrl = config['discord']['url']
 
 API_BASE = "https://www.mangaeden.com/api/"
 IMG_BASE = "http://cdn.mangaeden.com/mangasimg/"
 
-def sendmail(update_infos, email=USERMAIL):
-	'''send notification mail'''
 
-	sender= 'noreply@localhost.com'
-	message='This Mangas have been updated, please check them soon ! : \n\n'
+def discordNotif(update_infos, mails=[]):
 
+	message="These Mangas have been updated :"
+	embed = DiscordEmbed(title="New Manga", description=message, color=0e9319)
 	for info in update_infos:
-		message+="Name: %s\tlast_chapter: %s\tpath: %s\n"%(info[0],info[1],info[2])
-	msg = MIMEText(message)
-
-	msg["Subject"] = "Manga updates notification"
-	msg["Message-id"] = eUtils.make_msgid()
-	msg["From"] = sender
-	msg["To"] = email
-		
-	try:
-		host = "smtp.gmail.com"
-		server = smtplib.SMTP(host)
-		server.sendmail(sender, email, msg.as_string())
-		server.quit()
-
-	except Exception as e:
-		print "Notification not send!\nMail only work with gmail account"
-		print e
-
-
-def pushbullet(update_infos, mails=[]):
-	"""Notification by pushbullet"""
-
-	message='This Mangas have been updated, please check them soon ! : \n\n'
-	for info in update_infos:
-		message+="Name: %s\tlast_chapter: %s\tpath: %s\n"%(info[0],info[1],info[2])
-
-	try:
-		r = requests.get("https://api.pushbullet.com/v2/devices", auth=(PUSH_BULLET_KEY,''))
-		devices = json.loads(r.text)["devices"]
-		for device in devices:
-			if(device["active"] and device["pushable"] and device["nickname"].lower() in PUSH_BULLET_DEVICES):
-				note = {"type": "note", "title": "mangaU updates", "body": message, "device_iden":device["iden"]}
-				requests.post("https://api.pushbullet.com/v2/pushes", data=note, auth=(PUSH_BULLET_KEY,''))
-		
-		if(mails):
-			mails.extend(PUSH_BULLET_MAIL)
-			for mail in mails:
-				note = {"type": "note", "title": "mangaU updates", "body": message, "email":mail}
-				requests.post("https://api.pushbullet.com/v2/pushes", data=note, auth=(PUSH_BULLET_KEY,''))
-
-
-	except Exception as e:
-		print "Could not push notification"
-		print e
-
+		mangaName=info[0]
+		chapter=info[1]
+		embed.add_embed_field(name=mangaName, value=chapter)
+		webhook = DiscordWebhook(url=discordUrl)
+		webhook.add_embed(embed)
+		webhook.execute()
+		del webhook
 
 def update_manga_list():
 	'''Update List of accessible manga and save to DATA_DIR, this take some time'''
@@ -91,7 +57,7 @@ def update_manga_list():
 			con.commit()
 		
 
-def update_manga(manga_id=None, get_current_chap=0, notify=NOTIF):
+def update_manga(manga_id=None, get_current_chap=0):
 	'''Update the list of manga i'm following and download the latest release if possible.
 	with get_current_chap,  get the current chapter and save to a directory named 'latest
 	with notify, send notification using a function '''
@@ -101,14 +67,14 @@ def update_manga(manga_id=None, get_current_chap=0, notify=NOTIF):
 		cur=con.cursor()
 		sql_req = "SELECT UniqId, Last_Chapter, Chap_Dir, Title, Tot_Chapter FROM "+MANGA_TABLE+" WHERE Follow=%i"%True
 		if manga_id:
-			sql_req = sql_req+"and UniqId=%s"%manga_id;
+			sql_req = sql_req+"and UniqId=%s"%manga_id
 		cur.execute(sql_req)
 		manga_resp = cur.fetchall()
 		for manga in manga_resp:
 			cur_last_chapter = manga[1]	
 			chapter_id = get_manga_chapter_id(manga[0], chapter=manga[1]+1, get_latest_chapters_id=True)
 
-			for chap_num, chap_id in chapter_id.items():
+			for chap_num, chap_id in list(chapter_id.items()):
 				manga_dir = manga[2]+"%i/"%(chap_num)
 				success = save_chapter_to(manga_dir, get_chapter_info(chap_id))
 				manga[4] += 1
@@ -122,12 +88,7 @@ def update_manga(manga_id=None, get_current_chap=0, notify=NOTIF):
 
 		con.commit()
 	if(manga_updated):
-		if(notify == "pushbullet"):
-			pushbullet(manga_updated)
-		elif (notify == "sendmail"):
-			sendmail(manga_updated)
-		elif (notify == "pushbulletmail"):
-			sendmail(manga_updated, mails=[USERMAIL])
+		discordNotif(manga_updated)
 
 
 def download_manga(manga_id, manga_base_dir, chap_start=1, chap_end=None):
@@ -141,12 +102,12 @@ def download_manga(manga_id, manga_base_dir, chap_start=1, chap_end=None):
 			chap_d = "latest/"
 		else:
 			chap_d = "%i/"%chap_start
-			chap_start+=1;
+			chap_start+=1
 		success=save_chapter_to(manga_base_dir+chap_d, get_chapter_info(chapter_id))
-		print "\rchapter -%s- downloaded"%chap_d,
+		print("\rchapter -%s- downloaded"%chap_d, end=' ')
 
 	if(success):
-		print "\nChapters Downloaded into %s !"%manga_base_dir
+		print("\nChapters Downloaded into %s !"%manga_base_dir)
 
 
 def get_manga_info(manga_id):
@@ -179,7 +140,7 @@ def search_manga(manga_name, bestmatch=True):
 	with open(DATA_DIR+MANGALIST) as json_data:
 		manga_json = json.load(json_data)
 		manga_list = manga_json["manga"]
-		i = 0;
+		i = 0
 		for manga in manga_list:
 			if (manga_name.lower() in manga["a"].lower()) or  (manga_name.lower() in manga["t"].lower()):
 				matching_manga.append(manga)
@@ -221,7 +182,7 @@ def get_manga_chapter_id(manga_id, chapter=None, get_latest_chapters_id=False):
 				chapter = chapters[0][0]
 			except:
 				chapter = 0
-				print "Chapter not found!!! "
+				print("Chapter not found!!! ")
 
 		for chapt in chapters:
 			
@@ -230,7 +191,7 @@ def get_manga_chapter_id(manga_id, chapter=None, get_latest_chapters_id=False):
 
 			if chapter == chapt[0]:
 				chapter_id = chapt[3]
-				break;
+				break
 	return chapter_id if not get_latest_chapters_id else latest_chapters_id
 
 
@@ -281,8 +242,8 @@ def update_follow_manga(manga_id, following):
 	'''Do not update this manga anymore'''
 	con = lite.connect(DATA_DIR+DATABASE_NAME)
 	with con:
-		cur = con.cursor();
-		cur.execute("UPDATE "+MANGA_TABLE+"  SET Follow= ? WHERE UniqId = ?", (following, manga_id,));
+		cur = con.cursor()
+		cur.execute("UPDATE "+MANGA_TABLE+"  SET Follow= ? WHERE UniqId = ?", (following, manga_id,))
 		con.commit()
 
 
@@ -303,15 +264,15 @@ def add_manga_list(my_list, bestmatch=True):
 		search_res = search_manga(manga_name, bestmatch=bestmatch)
 		if(search_res):
 			add_manga(manga_id=search_res[0]["i"])
-			print "\r{0} Added - ({1} %)".format(search_res[0][u't'], (i*100.0/tot)), 
-	print "\n"
+			print("\r{0} Added - ({1} %)".format(search_res[0]['t'], (i*100.0/tot)), end=' ') 
+	print("\n")
 
 
 def drop_table():
 	'''Drop the table containing manga'''
 	con=lite.connect(DATA_DIR+DATABASE_NAME)
 	with con:
-		cur = con.cursor();
+		cur = con.cursor()
 		cur.execute("DROP TABLE IF EXISTS "+MANGA_TABLE)
 		con.commit()
 
@@ -319,7 +280,7 @@ def drop_table():
 def exists_in_table(manga_id):
 	con=lite.connect(DATA_DIR+DATABASE_NAME)
 	with con:
-		cur = con.cursor();
+		cur = con.cursor()
 		if(table_exists(MANGA_TABLE, cur)):
 			cur.execute("SELECT  Follow, Title FROM "+MANGA_TABLE +" WHERE UniqId = ?",(manga_id,))
 			follow = cur.fetchone()
@@ -331,7 +292,7 @@ def current_table():
 	con=lite.connect(DATA_DIR+DATABASE_NAME)
 	result = None
 	with con:
-		cur = con.cursor();
+		cur = con.cursor()
 		if(table_exists(MANGA_TABLE, cur)):
 			cur.execute("SELECT  Title,  Author, Years, Last_Chapter, Follow, strftime('%Y:%m:%d', Last_Chapter_Date) FROM "+MANGA_TABLE)
 			result = cur.fetchall()

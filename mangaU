@@ -36,7 +36,7 @@ def screen_update(content):
 	if content is None:
 		os.system('cls' if os.name == 'nt' else 'clear')
 	else:
-		print LOGO
+		print(LOGO)
 
 
 parser = argparse.ArgumentParser(description='mangaU is a manga manager that download and manage your mangas.\nUse only one option at times',formatter_class=SmartFormatter)
@@ -77,12 +77,12 @@ elif(args.search):
 
 	while new_search:
 		if(not name):
-			name = raw_input(entername)
+			name = input(entername)
 
 		output = search_manga(name, bestmatch)
 		n_result = len(output)
-		print resultfor+name+"..."
-		print
+		print(resultfor+name+"...")
+		print()
 		# Reset name to none value
 		name = None
 		new_search = False
@@ -90,36 +90,36 @@ elif(args.search):
 			sys.exit("Results not found for your search.")
 
 		for i, manga in enumerate(output):
-			print  Fore.RED+"[%s]"%(i+1),  "Title : {:<45}\tHits : {:>12}".format(manga[u"t"].encode('ascii', 'ignore'), manga["h"])
+			print(Fore.RED+"[%s]"%(i+1),  "Title : {:<45}\tHits : {:>12}".format(manga["t"].encode('ascii', 'ignore'), manga["h"]))
 
-		manga_number = int(raw_input("\nEnter your choice : "))
+		manga_number = int(input("\nEnter your choice : "))
 		
 		while (manga_number<1 or manga_number > n_result):
-			manga_number = int(raw_input('\033[1A'+'\033[K'+"Hidoi-naa, %s is not a valid choice, pls enter again : "%manga_number))
+			manga_number = int(input('\033[1A'+'\033[K'+"Hidoi-naa, %s is not a valid choice, pls enter again : "%manga_number))
 
 		manga_number -= 1
 		#Here the manga to search is found
-		manga_id = output[manga_number][u'i']
+		manga_id = output[manga_number]['i']
 		searched_manga = get_manga_info(manga_id)
 		manga_title = searched_manga[1]
 		location = BASE_DIR+manga_title+"/"
 		screen_update(None)
-		print Fore.BLUE+Style.BRIGHT+"Title:", manga_title
-		print Fore.BLUE+Style.BRIGHT+"Author:", searched_manga[2]
-		print Fore.BLUE+Style.BRIGHT+"Artist:", searched_manga[3]
+		print(Fore.BLUE+Style.BRIGHT+"Title:", manga_title)
+		print(Fore.BLUE+Style.BRIGHT+"Author:", searched_manga[2])
+		print(Fore.BLUE+Style.BRIGHT+"Artist:", searched_manga[3])
 		if(searched_manga[5]):
-			print Fore.BLUE+Style.BRIGHT+"Years: ", searched_manga[5], "\t"
+			print(Fore.BLUE+Style.BRIGHT+"Years: ", searched_manga[5], "\t")
 
 		if(searched_manga[8]):
-			print Fore.BLUE+Style.BRIGHT+"Last chapter: ", searched_manga[8], "\t",
+			print(Fore.BLUE+Style.BRIGHT+"Last chapter: ", searched_manga[8], "\t", end=' ')
 		
 		if(searched_manga[9]):
-			print Fore.BLUE+Style.BRIGHT+"Total chapter: ", searched_manga[9], "\t",
+			print(Fore.BLUE+Style.BRIGHT+"Total chapter: ", searched_manga[9], "\t", end=' ')
 		
 		if(searched_manga[4]):
-			print "\n"+Fore.BLUE+Style.BRIGHT+"Summary: ", searched_manga[4].encode('ascii', 'ignore')
+			print("\n"+Fore.BLUE+Style.BRIGHT+"Summary: ", searched_manga[4].encode('ascii', 'ignore'))
 
-		print Fore.BLACK+Style.BRIGHT+"Source : http://www.mangaeden.com/"+"\n"
+		print(Fore.BLACK+Style.BRIGHT+"Source : http://www.mangaeden.com/"+"\n")
 
 		# Now we print the choice left to the user
 		manga_exist, manga_followed = exists_in_table(manga_id)
@@ -137,20 +137,20 @@ elif(args.search):
 			user_option.append(7)
 
 		for option in user_option:
-			print Fore.RED+Style.BRIGHT+"[%s] "%(option+1),
-			print Fore.WHITE+GENERAL_OPTIONS[option], "\t", 
+			print(Fore.RED+Style.BRIGHT+"[%s] "%(option+1), end=' ')
+			print(Fore.WHITE+GENERAL_OPTIONS[option], "\t", end=' ') 
 		
-		print "\n"
-		chosen_option = int(raw_input("Master, pls choose an option : "))
+		print("\n")
+		chosen_option = int(input("Master, pls choose an option : "))
 		while (chosen_option-1 not in user_option):
-			chosen_option = int(raw_input('\033[1A'+'\033[K'+"Nanda kore ?, choose again: "))
+			chosen_option = int(input('\033[1A'+'\033[K'+"Nanda kore ?, choose again: "))
 
 		if(chosen_option==9):
 			new_search = True
 			screen_update(None)
 		
 		elif(chosen_option==1):
-			chapters = raw_input("Enter chapters to download (start:end+1): ")
+			chapters = input("Enter chapters to download (start:end+1): ")
 			chapters = [int(x) for x in chapters.strip().split(':')]
 			start = min(chapters)
 			end = max(chapters)
@@ -159,21 +159,21 @@ elif(args.search):
 
 		elif(chosen_option==2):
 			add_manga(manga_info = searched_manga, manga_id=manga_id)
-			print searched_manga[1], "Added !"
+			print(searched_manga[1], "Added !")
 
 		elif(chosen_option in [3,4]):
 			update_follow_manga(manga_id, chosen_option==3)
 
 		elif (chosen_option==5):
 			update_manga(manga_id=manga_id, get_current_chap=1)
-			print "Senpai, %s was updated!"%(manga_title)
+			print("Senpai, %s was updated!"%(manga_title))
 
 		elif (chosen_option==6):
 			delete_from_database(manga_id)
-			print "Senpai, %s was deleted!"%(manga_title)
+			print("Senpai, %s was deleted!"%(manga_title))
 
 		elif(chosen_option==7):
-			print location
+			print(location)
 
 		elif(chosen_option==8 and REDDIT_IS_SETUP):
 			raise NotImplementedError("Not doing this right now... Why? Fuck you!")
@@ -190,10 +190,10 @@ elif(args.show):
 		layout = "{: <20} | {: >15} | {: >5} | {: >12} | {: >3} | {: >10}"
 		screen_update(None)
 		screen_update(True)
-		print Fore.GREEN+Style.BRIGHT+layout.format(*header)
-		print Fore.GREEN+Style.BRIGHT+"-----------------------------------------------------------------------------------"
+		print(Fore.GREEN+Style.BRIGHT+layout.format(*header))
+		print(Fore.GREEN+Style.BRIGHT+"-----------------------------------------------------------------------------------")
 		for r in result:
-			print layout.format(*r), "\n"
+			print(layout.format(*r), "\n")
 
 	else:
-		print "Nothing here right now, you should add manga before running this, baka!"
+		print("Nothing here right now, you should add manga before running this, baka!")

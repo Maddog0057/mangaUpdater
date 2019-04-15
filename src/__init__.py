@@ -1,2 +1,2 @@
 from .mangalib import *
-from .parameters import REDDIT_IS_SETUP
+REDDIT_IS_SETUP = False
