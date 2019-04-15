@@ -1,0 +1,15 @@
+{
+    "discord":{
+      "name":"mangaU",
+      "token":"<YourDiscordToken>"
+    },
+    "system":{
+        "base":"/opt/mangaUpdater/Mangas/",
+        "data":"/opt/mangaUpdater/.mangas/"
+    },
+    "database":{
+        "name":"mangas.db",
+        "table":"myMangas",
+        "list":"mangalist.json"
+    }
+  }

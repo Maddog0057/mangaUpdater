@@ -11,7 +11,7 @@ from discord_webhook import DiscordWebhook, DiscordEmbed
 import json
 import requests
 
-with open("config.json", 'r') as json_data_file:
+with open("parameters.json", 'r') as json_data_file:
     config = json.load(json_data_file)
 
 BASE_DIR = config['system']['base']
